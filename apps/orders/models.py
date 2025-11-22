@@ -1,7 +1,6 @@
 import uuid
 
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from apps.catalog.models import Product
 from apps.users.models import ConsumerProfile, SupplierCompany
@@ -14,19 +13,18 @@ class Order(models.Model):
     """
 
     class Status(models.TextChoices):
-        PENDING = 'PENDING', _('Pending Approval')  # Created, waiting for Supplier
-        ACCEPTED = 'ACCEPTED', _('Accepted')  # Supplier agreed to fulfill
-        PROCESSING = 'PROCESSING', _('Processing')  # Being packed/prepared
-        READY = 'READY', _('Ready for Pickup/Delivery')
-        IN_TRANSIT = 'IN_TRANSIT', _('In Transit')
-        DELIVERED = 'DELIVERED', _('Delivered')
-        COMPLETED = 'COMPLETED', _('Completed')  # Confirmed by Consumer
-        REJECTED = 'REJECTED', _('Rejected')  # Supplier refused
-        CANCELLED = 'CANCELLED', _('Cancelled')  # Consumer cancelled before processing
+        PENDING = 'PENDING', ('Pending Approval')
+        ACCEPTED = 'ACCEPTED', ('Accepted')
+        PROCESSING = 'PROCESSING', ('Processing')
+        READY = 'READY', ('Ready for Pickup/Delivery')
+        IN_TRANSIT = 'IN_TRANSIT', ('In Transit')
+        DELIVERED = 'DELIVERED', ('Delivered')
+        COMPLETED = 'COMPLETED', ('Completed')
+        REJECTED = 'REJECTED', ('Rejected')
+        CANCELLED = 'CANCELLED', ('Cancelled')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # Parties
     consumer = models.ForeignKey(
         ConsumerProfile,
         on_delete=models.PROTECT,
@@ -38,21 +36,18 @@ class Order(models.Model):
         related_name='orders'
     )
 
-    # State
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING
     )
 
-    # Financials
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0.00
     )
 
-    # Logistics
     requested_delivery_date = models.DateField(
         null=True,
         blank=True,
@@ -63,7 +58,6 @@ class Order(models.Model):
     )
     notes = models.TextField(blank=True, help_text="Special instructions for Supplier")
 
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -98,17 +92,15 @@ class OrderItem(models.Model):
         related_name='order_items'
     )
 
-    # Snapshot Data (In case Product is deleted)
     product_name = models.CharField(max_length=255)
     product_sku = models.CharField(max_length=50, blank=True)
 
-    # Quantity & Price
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         help_text="Amount ordered (e.g., 5.5 kg)"
     )
-    unit = models.CharField(max_length=10)  # e.g., KG, PCS (Snapshot)
+    unit = models.CharField(max_length=10)
 
     unit_price = models.DecimalField(
         max_digits=10,
@@ -116,7 +108,6 @@ class OrderItem(models.Model):
         help_text="Price at the moment of purchase"
     )
 
-    # Derived
     total_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -124,11 +115,9 @@ class OrderItem(models.Model):
     )
 
     class Meta:
-        # Ensure a product only appears once per order (quantity should be updated instead)
         unique_together = ('order', 'product')
 
     def save(self, *args, **kwargs):
-        # Calculate total price for this line item automatically
         self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)
 

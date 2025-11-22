@@ -1,30 +1,7 @@
 import uuid
 
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-
-
-class CustomUserManager(BaseUserManager):
-    """
-    Custom manager to handle email as the unique identifier instead of username.
-    """
-
-    def create_user(self, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError(_('The Email field must be set'))
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('user_type', 'ADMIN')
-
-        return self.create_user(email, password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -35,15 +12,13 @@ class User(AbstractUser):
     """
 
     class UserTypes(models.TextChoices):
-        ADMIN = 'ADMIN', _('Platform Admin')
-        SUPPLIER = 'SUPPLIER', _('Supplier Staff')
-        CONSUMER = 'CONSUMER', _('Consumer (Restaurant/Hotel)')
+        ADMIN = 'ADMIN', ('Platform Admin')
+        SUPPLIER = 'SUPPLIER', ('Supplier Staff')
+        CONSUMER = 'CONSUMER', ('Consumer (Restaurant/Hotel)')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    username = None  # Remove username field
-    email = models.EmailField(_('email address'), unique=True)
+    email = models.EmailField(('email address'))
 
-    # Core Identity
     user_type = models.CharField(
         max_length=20,
         choices=UserTypes.choices,
@@ -51,17 +26,12 @@ class User(AbstractUser):
     )
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
-    # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []  # Email & Password are required by default
 
     def __str__(self):
-        return f"{self.email} ({self.get_user_type_display()})"
+        return f"{self.username} ({self.get_user_type_display()})"
 
 
 # ---------------------------------------------------------
@@ -78,10 +48,10 @@ class SupplierCompany(models.Model):
     tax_id = models.CharField(max_length=50, blank=True, help_text="BIN/IIN or Tax ID")
     address = models.TextField(blank=True)
 
-    # KYB / Verification Status (Managed by Platform Admin)
     is_verified = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = "Supplier Companies"
@@ -96,9 +66,9 @@ class SupplierStaffProfile(models.Model):
     """
 
     class Roles(models.TextChoices):
-        OWNER = 'OWNER', _('Owner')  # Full control
-        MANAGER = 'MANAGER', _('Manager')  # Catalog/Orders
-        SALES_REP = 'SALES_REP', _('Sales Representative')  # Chat/Ordering
+        OWNER = 'OWNER', ('Owner')
+        MANAGER = 'MANAGER', ('Manager')
+        SALES_REP = 'SALES_REP', ('Sales Representative')
 
     user = models.OneToOneField(
         User,
@@ -115,6 +85,9 @@ class SupplierStaffProfile(models.Model):
         choices=Roles.choices,
         default=Roles.SALES_REP
     )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.user.email} - {self.role} at {self.company.name}"
@@ -137,6 +110,9 @@ class ConsumerProfile(models.Model):
     business_name = models.CharField(max_length=255, help_text="Name of Restaurant/Hotel")
     address = models.TextField()
     contact_person_name = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.business_name} ({self.user.email})"

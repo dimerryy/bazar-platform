@@ -1,7 +1,6 @@
 import uuid
 
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from apps.users.models import SupplierCompany
 
@@ -9,10 +8,6 @@ from apps.users.models import SupplierCompany
 class Category(models.Model):
     """
     Product Categories (e.g., 'Dairy', 'Meat', 'Beverages').
-
-    Design Decision:
-    - If 'supplier' is NULL, it is a Global Category (managed by Platform Admin).
-    - If 'supplier' is SET, it is a custom category created by that Supplier.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -26,9 +21,6 @@ class Category(models.Model):
     )
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-
-    # # Hierarchy (Optional for MVP, but good for structure)
-    # parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:
         verbose_name_plural = "Categories"
@@ -46,23 +38,21 @@ class Product(models.Model):
     """
 
     class UnitTypes(models.TextChoices):
-        KG = 'KG', _('Kilogram')
-        LITER = 'L', _('Liter')
-        PIECE = 'PCS', _('Piece')
-        BOX = 'BOX', _('Box/Crate')
-        PACK = 'PACK', _('Pack')
-        GRAM = 'G', _('Gram')
+        KG = 'KG', ('Kilogram')
+        LITER = 'L', ('Liter')
+        PIECE = 'PCS', ('Piece')
+        BOX = 'BOX', ('Box/Crate')
+        PACK = 'PACK', ('Pack')
+        GRAM = 'G', ('Gram')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # Ownership
     supplier = models.ForeignKey(
         SupplierCompany,
         on_delete=models.CASCADE,
         related_name='products'
     )
 
-    # Organization
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -70,7 +60,6 @@ class Product(models.Model):
         related_name='products'
     )
 
-    # Details
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     sku = models.CharField(
@@ -80,7 +69,6 @@ class Product(models.Model):
     )
     image = models.ImageField(upload_to='products/', blank=True, null=True)
 
-    # Pricing & Units
     unit = models.CharField(
         max_length=10,
         choices=UnitTypes.choices,
@@ -99,7 +87,6 @@ class Product(models.Model):
         help_text="Optional discounted price"
     )
 
-    # Inventory & Availability
     stock_quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -116,7 +103,6 @@ class Product(models.Model):
         help_text="If False, hidden from catalog but kept for history."
     )
 
-    # Logistics
     lead_time_days = models.PositiveIntegerField(
         default=1,
         help_text="Days required to prepare/ship this item."

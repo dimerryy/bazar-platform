@@ -2,7 +2,6 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from apps.users.models import SupplierCompany, ConsumerProfile
 
@@ -16,14 +15,13 @@ class SupplierConsumerLink(models.Model):
     """
 
     class Status(models.TextChoices):
-        PENDING = 'PENDING', _('Pending Approval')
-        ACTIVE = 'ACTIVE', _('Active')  # The only status that allows trading
-        REJECTED = 'REJECTED', _('Rejected')  # Explicit rejection
-        BLOCKED = 'BLOCKED', _('Blocked')  # Relationship terminated negatively
+        PENDING = 'PENDING', ('Pending Approval')
+        ACTIVE = 'ACTIVE', ('Active')
+        REJECTED = 'REJECTED', ('Rejected')
+        BLOCKED = 'BLOCKED', ('Blocked')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # The two parties involved
     supplier = models.ForeignKey(
         SupplierCompany,
         on_delete=models.CASCADE,
@@ -35,18 +33,15 @@ class SupplierConsumerLink(models.Model):
         related_name='supplier_links'
     )
 
-    # State of the relationship
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING
     )
 
-    # Audit fields
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Tracks which Supplier Manager/Owner approved or blocked this link
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -59,7 +54,6 @@ class SupplierConsumerLink(models.Model):
     class Meta:
         verbose_name = "Supplier-Consumer Link"
         verbose_name_plural = "Supplier-Consumer Links"
-        # Prevent duplicate requests between the same two entities
         unique_together = ('supplier', 'consumer')
         ordering = ['-created_at']
 
